@@ -58,12 +58,12 @@ app.get('/auth/logout', function(req, res){
 //session 에 저장됨
 passport.serializeUser(function(user, done) {
   console.log('serializeUser', user);
-  done(null, user.authId);
+  done(null, user.sId);
 });
 // 로그인 이후 접속시
 passport.deserializeUser(function(id, done) {
   console.log('deserializeUser', id);
-  var sql = 'SELECT * FROM users WHERE authId=?';
+  var sql = 'SELECT * FROM users WHERE sId=?';
   conn.query(sql, [id], function(err, results){
     if(err){
       console.log(err);
@@ -77,7 +77,7 @@ passport.use(new LocalStrategy(
   function(username, password, done){
     var uname = username;
     var pwd = password;
-    var sql = 'SELECT * FROM users WHERE authId=?';
+    var sql = 'SELECT * FROM users WHERE sId=?';
     var msgNouser = '가입된 사용자가 아닙니다.';
     var msgNopass = '패스워드가 잘못되었습니다.';
     conn.query(sql, ['local:'+uname], function(err, results){
@@ -120,8 +120,8 @@ app.post(
       var resData = {
         code: '1000',
         message: '로그인 되었습니다',
-        sId: user.authId,
-        displayName: user.displayName
+        sId: user.sId,
+        nickname: user.nickname
       };
       return res.json(resData);
     })(req, res, next);
@@ -131,14 +131,17 @@ app.post(
 // 회원가입 api
 app.post('/auth/register', function(req, res){
   console.log(req.body);
+  // private username: string;
+  // private password: string;
+  // private nickname: string;
 
   hasher({password:req.body.password}, function(err, pass, salt, hash){
     var user = {
-      authId:'local:'+req.body.username,
+      sId:'local:'+req.body.username,
       username:req.body.username,
       password:hash,
       salt:salt,
-      displayName:req.body.displayName
+      nickname:req.body.nickname
     };
     var sql = 'INSERT INTO users SET ?';
     conn.query(sql, user, function(err, results){
@@ -160,8 +163,8 @@ app.post('/auth/register', function(req, res){
             var resData = {
               code: '1000',
               message: '가입되었습니다',
-              sId: user.authId,
-              displayName: user.displayName
+              sId: user.sId,
+              nickname: user.nickname
             };
             return res.json(resData);
           });
@@ -172,12 +175,12 @@ app.post('/auth/register', function(req, res){
   });
 });
 
-// 3.주문리스트  : GET /orders/:sid
-app.get('/orders/:sid', function(req, res){
-  console.log(req.params.sid);
+// 3.주문리스트  : GET /orders/:sId
+app.get('/orders/:sId', function(req, res){
+  console.log(req.params.sId);
   //주문일시, 이름, 연락처, 주소, 상품, 금액, 택배비, 기타
   var order = {
-    sellerId: req.params.sid
+    sellerId: req.params.sId
   }
   var sql = 'SELECT * FROM orders WHERE ? ORDER BY orderdate DESC ';
   conn.query(sql, order, function(err, results){
@@ -194,13 +197,13 @@ app.get('/orders/:sid', function(req, res){
   });
 });
 
-// 4.주문등록   : POST /orders/:sid
-app.post('/orders/:sid', function(req, res){
+// 4.주문등록   : POST /orders/:sId
+app.post('/orders/:sId', function(req, res){
   console.log(req.body);
 
   //주문일시, 이름, 연락처, 주소, 상품, 금액, 택배비, 기타
   var order = {
-    sellerId: req.params.sid,
+    sellerId: req.params.sId,
     orderdate: req.body.orderDate,
     ordername: req.body.orderName,
     orderphone: req.body.orderPhone,
@@ -226,13 +229,13 @@ app.post('/orders/:sid', function(req, res){
   });
 });
 
-// 5.주문삭제   : DELETE /orders/:sid/:oid
-app.delete('/orders/:sid/:oid', function(req, res){
+// 5.주문삭제   : DELETE /orders/:sId/:oid
+app.delete('/orders/:sId/:oid', function(req, res){
   console.log(req.body);
 
   //주문일시, 이름, 연락처, 주소, 상품, 금액, 택배비, 기타
   // var order = {
-  //   sellerId: req.params.sid,
+  //   sellerId: req.params.sId,
   //   orderdate: req.body.orderDate,
   //   ordername: req.body.orderName,
   //   orderphone: req.body.orderPhone,
@@ -258,13 +261,13 @@ app.delete('/orders/:sid/:oid', function(req, res){
   });
 });
 
-// 6.주문수정   : PUT /orders/:sid/:oid
-app.put('/orders/:sid/:oid', function(req, res){
+// 6.주문수정   : PUT /orders/:sId/:oid
+app.put('/orders/:sId/:oid', function(req, res){
   console.log(req.body);
 
   //주문일시, 이름, 연락처, 주소, 상품, 금액, 택배비, 기타
   // var order = {
-  //   sellerId: req.params.sid,
+  //   sellerId: req.params.sId,
   //   orderdate: req.body.orderDate,
   //   ordername: req.body.orderName,
   //   orderphone: req.body.orderPhone,
