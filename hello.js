@@ -120,7 +120,7 @@ app.post(
       var resData = {
         code: '1000',
         message: '로그인 되었습니다',
-        sid: user.sid,
+        authid: user.authid,
         nickname: user.nickname
       };
       return res.json(resData);
@@ -137,7 +137,7 @@ app.post('/auth/register', function(req, res){
 
   hasher({password:req.body.password}, function(err, pass, salt, hash){
     var user = {
-      authId:'local:'+req.body.username,
+      authid:'local:'+req.body.username,
       username:req.body.username,
       password:hash,
       salt:salt,
@@ -163,7 +163,7 @@ app.post('/auth/register', function(req, res){
             var resData = {
               code: '1000',
               message: '가입되었습니다',
-              sid: user.sid,
+              authid: user.authid,
               nickname: user.nickname
             };
             return res.json(resData);
@@ -175,12 +175,12 @@ app.post('/auth/register', function(req, res){
   });
 });
 
-// 3.주문리스트  : GET /orders/:sid
-app.get('/orders/:sid', function(req, res){
-  console.log(req.params.sid);
+// 3.주문리스트  : GET /orders/:authid
+app.get('/orders/:authid', function(req, res){
+  console.log(req.params.authid);
   //주문일시, 이름, 연락처, 주소, 상품, 금액, 택배비, 기타
   var order = {
-    sellerId: req.params.sid
+    sellerId: req.params.authid
   }
   var sql = 'SELECT * FROM orders WHERE ? ORDER BY orderdate DESC ';
   conn.query(sql, order, function(err, results){
@@ -197,13 +197,13 @@ app.get('/orders/:sid', function(req, res){
   });
 });
 
-// 4.주문등록   : POST /orders/:sid
-app.post('/orders/:sid', function(req, res){
+// 4.주문등록   : POST /orders/:authid
+app.post('/orders/:authid', function(req, res){
   console.log(req.body);
 
   //주문일시, 이름, 연락처, 주소, 상품, 금액, 택배비, 기타
   var order = {
-    sellerId: req.params.sid,
+    sellerId: req.params.authid,
     orderdate: req.body.orderDate,
     ordername: req.body.orderName,
     orderphone: req.body.orderPhone,
@@ -229,13 +229,13 @@ app.post('/orders/:sid', function(req, res){
   });
 });
 
-// 5.주문삭제   : DELETE /orders/:sid/:oid
-app.delete('/orders/:sid/:oid', function(req, res){
+// 5.주문삭제   : DELETE /orders/:authid/:oid
+app.delete('/orders/:authid/:oid', function(req, res){
   console.log(req.body);
 
   //주문일시, 이름, 연락처, 주소, 상품, 금액, 택배비, 기타
   // var order = {
-  //   sellerId: req.params.sid,
+  //   sellerId: req.params.authid,
   //   orderdate: req.body.orderDate,
   //   ordername: req.body.orderName,
   //   orderphone: req.body.orderPhone,
@@ -261,13 +261,13 @@ app.delete('/orders/:sid/:oid', function(req, res){
   });
 });
 
-// 6.주문수정   : PUT /orders/:sid/:oid
-app.put('/orders/:sid/:oid', function(req, res){
+// 6.주문수정   : PUT /orders/:authid/:oid
+app.put('/orders/:authid/:oid', function(req, res){
   console.log(req.body);
 
   //주문일시, 이름, 연락처, 주소, 상품, 금액, 택배비, 기타
   // var order = {
-  //   sellerId: req.params.sid,
+  //   sellerId: req.params.authid,
   //   orderdate: req.body.orderDate,
   //   ordername: req.body.orderName,
   //   orderphone: req.body.orderPhone,
