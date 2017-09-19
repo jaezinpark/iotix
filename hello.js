@@ -180,7 +180,7 @@ app.get('/orders/:authid', function(req, res){
   console.log(req.params.authid);
   //주문일시, 이름, 연락처, 주소, 상품, 금액, 택배비, 기타
   var order = {
-    sellerId: req.params.authid
+    sellerid: req.params.authid
   }
   var sql = 'SELECT * FROM orders WHERE ? ORDER BY orderdate DESC ';
   conn.query(sql, order, function(err, results){
@@ -203,7 +203,7 @@ app.post('/orders/:authid', function(req, res){
 
   //주문일시, 이름, 연락처, 주소, 상품, 금액, 택배비, 기타
   var order = {
-    sellerId: req.params.authid,
+    sellerid: req.params.authid,
     orderdate: req.body.orderDate,
     ordername: req.body.orderName,
     orderphone: req.body.orderPhone,
