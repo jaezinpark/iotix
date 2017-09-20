@@ -80,7 +80,7 @@ passport.use(new LocalStrategy(
     var sql = 'SELECT * FROM users WHERE authId=?';
     var msgNouser = '가입된 사용자가 아닙니다.';
     var msgNopass = '패스워드가 잘못되었습니다.';
-    conn.query(sql, ['local:'+uname], function(err, results){
+    conn.query(sql, ['local'+uname], function(err, results){
       if(err){
         console.log(msgNouser);
         return done(null, false, { code: 9011, message: '가입된 사용자가 아닙니다.' });
