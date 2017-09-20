@@ -10,24 +10,13 @@ var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
 var hasher = bkfd2Password();
 var mysql      = require('mysql');
-/*
 var conn = mysql.createConnection({
   host     : 'us-cdbr-iron-east-05.cleardb.net',
   user     : 'b2212031659833',
   password : 'aeb44d8b',
   database : 'heroku_c7374f367bb0cba'
 });
-conn.connect(); */
-var pool = mysql.createPool({
-    host                : 'us-cdbr-iron-east-05.cleardb.net',
-    port                : 3306,
-    user                : 'aeb44d8b',
-    password            : 'aeb44d8b',
-    database            : 'heroku_c7374f367bb0cba',
-    connectionLimit     : 20,
-    waitForConnections  : false
-});
-
+conn.connect();
 var app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -74,7 +63,6 @@ passport.serializeUser(function(user, done) {
 // 로그인 이후 접속시
 passport.deserializeUser(function(id, done) {
   console.log('deserializeUser', id);
-  /*
   var sql = 'SELECT * FROM users WHERE authId=?';
   conn.query(sql, [id], function(err, results){
     if(err){
@@ -84,21 +72,6 @@ passport.deserializeUser(function(id, done) {
       done(null, results[0]);
     }
   });
-  */
-  pool.getConnection(function(err,conn){
-      var sql = 'SELECT * FROM users WHERE authId=?';
-      conn.query(sql, [id], function(err, results){
-        if(err){
-          console.log(err);
-          conn.release();
-          done('There is no user.');
-        } else {
-          conn.release();
-          done(null, results[0]);
-        }
-      });
-  });
-
 });
 passport.use(new LocalStrategy(
   function(username, password, done){
@@ -107,34 +80,27 @@ passport.use(new LocalStrategy(
     var sql = 'SELECT * FROM users WHERE authId=?';
     var msgNouser = '가입된 사용자가 아닙니다.';
     var msgNopass = '패스워드가 잘못되었습니다.';
-    pool.getConnection(function(err,conn){
-
-        conn.query(sql, ['local'+uname], function(err, results){
-          if(err){
-            console.log(msgNouser);
-            conn.release();
-            return done(null, false, { code: 9011, message: '가입된 사용자가 아닙니다.' });
-          }
-          if(results.length === 0){
-            console.log(msgNouser);
-            conn.release();
-            return done(null, false, { code: 9011, message: '가입된 사용자가 아닙니다.' });
+    conn.query(sql, ['local'+uname], function(err, results){
+      if(err){
+        console.log(msgNouser);
+        return done(null, false, { code: 9011, message: '가입된 사용자가 아닙니다.' });
+      }
+      if(results.length === 0){
+        console.log(msgNouser);
+        return done(null, false, { code: 9011, message: '가입된 사용자가 아닙니다.' });
+      } else {
+        var user = results[0];
+        return hasher({password:pwd, salt:user.salt}, function(err, pass, salt, hash){
+          if(hash === user.password){
+            console.log('use LocalStrategy', user);
+            return done(null, user);
           } else {
-            var user = results[0];
-            conn.release();
-            return hasher({password:pwd, salt:user.salt}, function(err, pass, salt, hash){
-              if(hash === user.password){
-                console.log('use LocalStrategy', user);
-                return done(null, user);
-              } else {
-                console.log(msgNopass);
-                return done(null, false, { code: 9012, message: '패스워드가 잘못되었습니다.' });
-              }
-            });
+            console.log(msgNopass);
+            return done(null, false, { code: 9012, message: '패스워드가 잘못되었습니다.' });
           }
         });
-
-      });
+      }
+    });
   }
 ));
 
@@ -178,39 +144,33 @@ app.post('/auth/register', function(req, res){
       nickname:req.body.nickname
     };
     var sql = 'INSERT INTO users SET ?';
-    pool.getConnection(function(err,conn){
-        conn.query(sql, user, function(err, results){
-          if(err){
-            console.log(err.errno);
-            if(err.errno === 1582 || err.errno === 1062){
-                var resData = {
-                  code: '9001',
-                  message: '사용중인 ID입니다'
-                };
-                conn.release();
-                return res.json(resData);
-            } else {
-                conn.release();
-                res.status(500);
-            }
+    conn.query(sql, user, function(err, results){
+      if(err){
+        console.log(err.errno);
+        if(err.errno === 1582 || err.errno === 1062){
+            var resData = {
+              code: '9001',
+              message: '사용중인 ID입니다'
+            };
+            return res.json(resData);
+        } else {
+            res.status(500);
+        }
 
-          } else {
-            req.login(user, function(err){
-              req.session.save(function(){
-                var resData = {
-                  code: '1000',
-                  message: '가입되었습니다',
-                  authid: user.authid,
-                  nickname: user.nickname
-                };
-                conn.release();
-                return res.json(resData);
-              });
-            });
-          }
+      } else {
+        req.login(user, function(err){
+          req.session.save(function(){
+            var resData = {
+              code: '1000',
+              message: '가입되었습니다',
+              authid: user.authid,
+              nickname: user.nickname
+            };
+            return res.json(resData);
+          });
         });
-
-      });
+      }
+    });
 
   });
 });
@@ -218,24 +178,19 @@ app.post('/auth/register', function(req, res){
 // 3.주문리스트  : GET /orders/:authid
 app.get('/orders/:authid', function(req, res){
   console.log(req.params.authid);
+
   var sql = 'SELECT * FROM orders WHERE sellerid=' + req.params.authid + ' ORDER BY orderdate DESC ';
-  pool.getConnection(function(err,conn){
-
-      conn.query(sql, order, function(err, results){
-        if(err){
-          console.log(err.errno);
-          conn.release();
-        } else {
-          var resData = {
-            code: '1000',
-            message: results
-          };
-          console.log(results)
-          conn.release();
-          return res.json(resData);
-        }
-      });
-
+  conn.query(sql, order, function(err, results){
+    if(err){
+      console.log(err.errno);
+    } else {
+      var resData = {
+        code: '1000',
+        message: results
+      };
+      console.log(results)
+      return res.json(resData);
+    }
   });
 });
 
@@ -258,22 +213,16 @@ app.post('/orders/:authid', function(req, res){
     sendyn: req.body.sendyn
   }
   var sql = 'INSERT INTO orders SET ?';
-  pool.getConnection(function(err,conn){
-
-      conn.query(sql, order, function(err, results){
-        if(err){
-          console.log(err.errno);
-          conn.release();
-        } else {
-          var resData = {
-            code: '1000',
-            message: '주문이 등록되었습니다'
-          };
-          conn.release();
-          return res.json(resData);
-        }
-      });
-
+  conn.query(sql, order, function(err, results){
+    if(err){
+      console.log(err.errno);
+    } else {
+      var resData = {
+        code: '1000',
+        message: '주문이 등록되었습니다'
+      };
+      return res.json(resData);
+    }
   });
 });
 
@@ -296,21 +245,17 @@ app.delete('/orders/:authid/:oid', function(req, res){
   //   sendyn: req.body.sendyn
   // }
   var sql = 'DELETE FROM orders WHERE ordernum=' + req.params.oid;
-  pool.getConnection(function(err,conn){
-      conn.query(sql, req.body, function(err, results){
-        if(err){
-          console.log(err.errno);
-          conn.release();
-        } else {
-          var resData = {
-            code: '1000',
-            message: '주문이 삭제되었습니다'
-          };
-          conn.release();
-          return res.json(resData);
-        }
-      });
-    });
+  conn.query(sql, req.body, function(err, results){
+    if(err){
+      console.log(err.errno);
+    } else {
+      var resData = {
+        code: '1000',
+        message: '주문이 삭제되었습니다'
+      };
+      return res.json(resData);
+    }
+  });
 });
 
 // 6.주문수정   : PUT /orders/:authid/:oid
@@ -332,20 +277,16 @@ app.put('/orders/:authid/:oid', function(req, res){
     sendyn: req.body.sendyn
   }
   var sql = 'UPDATE orders SET ? WHERE ordernum=' + req.params.oid;
-  pool.getConnection(function(err,conn){
-      conn.query(sql, req.body, function(err, results){
-        if(err){
-          console.log(err.errno);
-          conn.release();
-        } else {
-          var resData = {
-            code: '1000',
-            message: '주문이 수정되었습니다'
-          };
-          conn.release();
-          return res.json(resData);
-        }
-      });
+  conn.query(sql, req.body, function(err, results){
+    if(err){
+      console.log(err.errno);
+    } else {
+      var resData = {
+        code: '1000',
+        message: '주문이 수정되었습니다'
+      };
+      return res.json(resData);
+    }
   });
 });
 
