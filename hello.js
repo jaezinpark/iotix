@@ -1,6 +1,6 @@
 var express = require('express');
-// var session = require('express-session');
-// var MySQLStore = require('express-mysql-session')(session);
+var session = require('express-session');
+var MySQLStore = require('express-mysql-session')(session);
 var bodyParser = require('body-parser');
 var multer = require('multer');
 var upload = multer();
@@ -9,7 +9,7 @@ var bkfd2Password = require("pbkdf2-password");
 var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
 var hasher = bkfd2Password();
-var mysql = require('mysql');
+var mysql      = require('mysql');
 var conn = mysql.createConnection({
   host     : 'us-cdbr-iron-east-05.cleardb.net',
   user     : 'b2212031659833',
@@ -20,29 +20,29 @@ conn.connect();
 var app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-// app.use(session({
-//   secret: '1234DSFs@adf1234!@#$asd',
-//   resave: false,
-//   saveUninitialized: true,
-//   store:new MySQLStore({
-//     host     : 'us-cdbr-iron-east-05.cleardb.net',
-//     port     : 3306,
-//     user     : 'b2212031659833',
-//     password : 'aeb44d8b',
-//     database : 'heroku_c7374f367bb0cba'
-//   })
-// }));
+app.use(session({
+  secret: '1234DSFs@adf1234!@#$asd',
+  resave: false,
+  saveUninitialized: true,
+  store:new MySQLStore({
+    host     : 'us-cdbr-iron-east-05.cleardb.net',
+    port     : 3306,
+    user     : 'b2212031659833',
+    password : 'aeb44d8b',
+    database : 'heroku_c7374f367bb0cba'
+  })
+}));
 app.use(passport.initialize());
-// app.use(passport.session());
+app.use(passport.session());
 
-// app.get('/count', function(req, res){
-//   if(req.session.count) {
-//     req.session.count++;
-//   } else {
-//     req.session.count = 1;
-//   }
-//   res.send('count : '+req.session.count);
-// });
+app.get('/count', function(req, res){
+  if(req.session.count) {
+    req.session.count++;
+  } else {
+    req.session.count = 1;
+  }
+  res.send('count : '+req.session.count);
+});
 
 // logout api :
 app.get('/auth/logout', function(req, res){
@@ -159,7 +159,7 @@ app.post('/auth/register', function(req, res){
 
       } else {
         req.login(user, function(err){
-          // req.session.save(function(){
+          req.session.save(function(){
             var resData = {
               code: '1000',
               message: '가입되었습니다',
@@ -167,7 +167,7 @@ app.post('/auth/register', function(req, res){
               nickname: user.nickname
             };
             return res.json(resData);
-          // });
+          });
         });
       }
     });
@@ -176,9 +176,11 @@ app.post('/auth/register', function(req, res){
 });
 
 // 3.주문리스트  : GET /orders/:authid
-app.get('/orders/:authid', function(req, res){
+app.get('/orders/:authid',
+  passport.authenticate('local', { session: false }),
+  function(req, res){
   console.log(req.params.authid);
-  
+
   var sql = 'SELECT * FROM orders WHERE sellerid=' + req.params.authid + ' ORDER BY orderdate DESC ';
   conn.query(sql, order, function(err, results){
     if(err){
@@ -195,7 +197,10 @@ app.get('/orders/:authid', function(req, res){
 });
 
 // 4.주문등록   : POST /orders/:authid
-app.post('/orders/:authid', function(req, res){
+app.post(
+  '/orders/:authid',
+  passport.authenticate('local', { session: false }),
+  function(req, res){
   console.log(req.body);
 
   //주문일시, 이름, 연락처, 주소, 상품, 금액, 택배비, 기타
@@ -227,7 +232,9 @@ app.post('/orders/:authid', function(req, res){
 });
 
 // 5.주문삭제   : DELETE /orders/:authid/:oid
-app.delete('/orders/:authid/:oid', function(req, res){
+app.delete('/orders/:authid/:oid',
+  passport.authenticate('local', { session: false }),
+  function(req, res){
   console.log(req.body);
 
   //주문일시, 이름, 연락처, 주소, 상품, 금액, 택배비, 기타
@@ -259,7 +266,9 @@ app.delete('/orders/:authid/:oid', function(req, res){
 });
 
 // 6.주문수정   : PUT /orders/:authid/:oid
-app.put('/orders/:authid/:oid', function(req, res){
+app.put('/orders/:authid/:oid',
+  passport.authenticate('local', { session: false }),
+  function(req, res){
   console.log(req.body);
 
   //주문일시, 이름, 연락처, 주소, 상품, 금액, 택배비, 기타
