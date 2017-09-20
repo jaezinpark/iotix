@@ -178,7 +178,7 @@ app.post('/auth/register', function(req, res){
 // 3.주문리스트  : GET /orders/:authid
 app.get('/orders/:authid', function(req, res){
   console.log(req.params.authid);
-
+  
   var sql = 'SELECT * FROM orders WHERE sellerid=' + req.params.authid + ' ORDER BY orderdate DESC ';
   conn.query(sql, order, function(err, results){
     if(err){
