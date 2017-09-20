@@ -266,19 +266,19 @@ app.put('/orders/:authid/:oid', function(req, res){
   console.log(req.body);
 
   //주문일시, 이름, 연락처, 주소, 상품, 금액, 택배비, 기타
-  // var order = {
-  //   sellerId: req.params.authid,
-  //   orderdate: req.body.orderDate,
-  //   ordername: req.body.orderName,
-  //   orderphone: req.body.orderPhone,
-  //   recpaddress: req.body.recpAddress,
-  //   products: req.body.products,
-  //   orderamount: req.body.orderAmount,
-  //   deliverycharge: req.body.deliveryCharge,
-  //   ordermemo: req.body.orderMemo,
-  //   paymentyn: req.body.paymentyn,
-  //   sendyn: req.body.sendyn
-  // }
+  var order = {
+    sellerid: req.params.authid,
+    orderdate: req.body.orderDate,
+    ordername: req.body.orderName,
+    orderphone: req.body.orderPhone,
+    recpaddress: req.body.recpAddress,
+    products: req.body.products,
+    orderamount: req.body.orderAmount,
+    deliverycharge: req.body.deliveryCharge,
+    ordermemo: req.body.orderMemo,
+    paymentyn: req.body.paymentyn,
+    sendyn: req.body.sendyn
+  }
   var sql = 'UPDATE orders SET ? WHERE ordernum=' + req.params.oid;
   conn.query(sql, req.body, function(err, results){
     if(err){
@@ -294,6 +294,7 @@ app.put('/orders/:authid/:oid', function(req, res){
 });
 
 //app.set('port', (process.env.PORT || 5000));
-app.listen((process.env.PORT || 5000), function(){
-  console.log('Connected 3000 port!!!');
+var port = process.env.PORT || 5000;
+app.listen(port, function(){
+  console.log('Connected ' + port + ' port!!!');
 });
