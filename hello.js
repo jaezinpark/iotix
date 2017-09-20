@@ -1,6 +1,6 @@
 var express = require('express');
-var session = require('express-session');
-var MySQLStore = require('express-mysql-session')(session);
+// var session = require('express-session');
+// var MySQLStore = require('express-mysql-session')(session);
 var bodyParser = require('body-parser');
 var multer = require('multer');
 var upload = multer();
@@ -9,7 +9,7 @@ var bkfd2Password = require("pbkdf2-password");
 var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
 var hasher = bkfd2Password();
-var mysql      = require('mysql');
+var mysql = require('mysql');
 var conn = mysql.createConnection({
   host     : 'us-cdbr-iron-east-05.cleardb.net',
   user     : 'b2212031659833',
@@ -20,29 +20,29 @@ conn.connect();
 var app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-app.use(session({
-  secret: '1234DSFs@adf1234!@#$asd',
-  resave: false,
-  saveUninitialized: true,
-  store:new MySQLStore({
-    host     : 'us-cdbr-iron-east-05.cleardb.net',
-    port     : 3306,
-    user     : 'b2212031659833',
-    password : 'aeb44d8b',
-    database : 'heroku_c7374f367bb0cba'
-  })
-}));
+// app.use(session({
+//   secret: '1234DSFs@adf1234!@#$asd',
+//   resave: false,
+//   saveUninitialized: true,
+//   store:new MySQLStore({
+//     host     : 'us-cdbr-iron-east-05.cleardb.net',
+//     port     : 3306,
+//     user     : 'b2212031659833',
+//     password : 'aeb44d8b',
+//     database : 'heroku_c7374f367bb0cba'
+//   })
+// }));
 app.use(passport.initialize());
-app.use(passport.session());
+// app.use(passport.session());
 
-app.get('/count', function(req, res){
-  if(req.session.count) {
-    req.session.count++;
-  } else {
-    req.session.count = 1;
-  }
-  res.send('count : '+req.session.count);
-});
+// app.get('/count', function(req, res){
+//   if(req.session.count) {
+//     req.session.count++;
+//   } else {
+//     req.session.count = 1;
+//   }
+//   res.send('count : '+req.session.count);
+// });
 
 // logout api :
 app.get('/auth/logout', function(req, res){
@@ -159,7 +159,7 @@ app.post('/auth/register', function(req, res){
 
       } else {
         req.login(user, function(err){
-          req.session.save(function(){
+          // req.session.save(function(){
             var resData = {
               code: '1000',
               message: '가입되었습니다',
@@ -167,7 +167,7 @@ app.post('/auth/register', function(req, res){
               nickname: user.nickname
             };
             return res.json(resData);
-          });
+          // });
         });
       }
     });
