@@ -16,7 +16,13 @@ var conn = mysql.createConnection({
   password : 'aeb44d8b',
   database : 'heroku_c7374f367bb0cba'
 });
-conn.connect();
+conn.connect(function(err){
+  console.log(err.code);
+  console.log(err.fatal);
+});
+conn.on('error', function (err){
+  console.log('conn.on: ' + err.code);
+})
 var app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -65,6 +71,7 @@ passport.deserializeUser(function(id, done) {
   console.log('deserializeUser', id);
   var sql = 'SELECT * FROM users WHERE authId=?';
   conn.query(sql, [id], function(err, results){
+    if (err) { throw err; }
     if(err){
       console.log(err);
       done('There is no user.');
@@ -81,6 +88,7 @@ passport.use(new LocalStrategy(
     var msgNouser = '가입된 사용자가 아닙니다.';
     var msgNopass = '패스워드가 잘못되었습니다.';
     conn.query(sql, ['local'+uname], function(err, results){
+      if (err) { throw err; }
       if(err){
         console.log(msgNouser);
         return done(null, false, { code: 9011, message: '가입된 사용자가 아닙니다.' });
@@ -145,6 +153,7 @@ app.post('/auth/register', function(req, res){
     };
     var sql = 'INSERT INTO users SET ?';
     conn.query(sql, user, function(err, results){
+      if (err) { throw err; }
       if(err){
         console.log(err.errno);
         if(err.errno === 1582 || err.errno === 1062){
@@ -177,12 +186,12 @@ app.post('/auth/register', function(req, res){
 
 // 3.주문리스트  : GET /orders/:authid
 app.get('/orders/:authid',
-  passport.authenticate('local', { session: false }),
   function(req, res){
   console.log(req.params.authid);
 
   var sql = 'SELECT * FROM orders WHERE sellerid=' + req.params.authid + ' ORDER BY orderdate DESC ';
   conn.query(sql, order, function(err, results){
+    if (err) { throw err; }
     if(err){
       console.log(err.errno);
     } else {
@@ -199,7 +208,6 @@ app.get('/orders/:authid',
 // 4.주문등록   : POST /orders/:authid
 app.post(
   '/orders/:authid',
-  passport.authenticate('local', { session: false }),
   function(req, res){
   console.log(req.body);
 
@@ -219,6 +227,7 @@ app.post(
   }
   var sql = 'INSERT INTO orders SET ?';
   conn.query(sql, order, function(err, results){
+    if (err) { throw err; }
     if(err){
       console.log(err.errno);
     } else {
@@ -233,7 +242,6 @@ app.post(
 
 // 5.주문삭제   : DELETE /orders/:authid/:oid
 app.delete('/orders/:authid/:oid',
-  passport.authenticate('local', { session: false }),
   function(req, res){
   console.log(req.body);
 
@@ -253,6 +261,7 @@ app.delete('/orders/:authid/:oid',
   // }
   var sql = 'DELETE FROM orders WHERE ordernum=' + req.params.oid;
   conn.query(sql, req.body, function(err, results){
+    if (err) { throw err; }
     if(err){
       console.log(err.errno);
     } else {
@@ -267,7 +276,6 @@ app.delete('/orders/:authid/:oid',
 
 // 6.주문수정   : PUT /orders/:authid/:oid
 app.put('/orders/:authid/:oid',
-  passport.authenticate('local', { session: false }),
   function(req, res){
   console.log(req.body);
 
@@ -287,6 +295,7 @@ app.put('/orders/:authid/:oid',
   }
   var sql = 'UPDATE orders SET ? WHERE ordernum=' + req.params.oid;
   conn.query(sql, req.body, function(err, results){
+    if (err) { throw err; }
     if(err){
       console.log(err.errno);
     } else {
