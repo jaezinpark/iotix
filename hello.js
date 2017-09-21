@@ -134,7 +134,7 @@ passport.use(new LocalStrategy(
             });
           }
         });
-    }
+    });
   }
 ));
 
