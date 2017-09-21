@@ -74,12 +74,12 @@ app.get('/auth/logout', function(req, res){
 //session 에 저장됨
 passport.serializeUser(function(user, done) {
   console.log('serializeUser', user);
-  done(null, user.authId);
+  done(null, user.authid);
 });
 // 로그인 이후 접속시
 passport.deserializeUser(function(id, done) {
   console.log('deserializeUser', id);
-  var sql = 'SELECT * FROM users WHERE authId=?';
+  var sql = 'SELECT * FROM users WHERE authid=?';
   pool.getConnection(function(error, conn) {
       if (error) { throw error; }
 
@@ -181,7 +181,7 @@ app.post('/auth/register', function(req, res){
         if (error) { throw error; }
 
         conn.query(sql, user, function(err, results){
-          if (err) { throw err; }
+          //if (err) { throw err; }
           if(err){
             console.log(err.errno);
             if(err.errno === 1582 || err.errno === 1062){
