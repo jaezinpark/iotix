@@ -214,8 +214,10 @@ app.post('/auth/register', function(req, res){
 app.get('/orders/:authid',
   function(req, res){
   console.log(req.params.authid);
-
-  var sql = 'SELECT * FROM orders WHERE sellerid=' + req.params.authid;
+  var order = {
+    sellerid: req.params.authid
+  }
+  var sql = 'SELECT * FROM orders WHERE ? ORDER BY orderdate DESC ';
 
   pool.getConnection(function(error, conn) {
       if (error) { throw error; }
