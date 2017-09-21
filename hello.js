@@ -100,14 +100,14 @@ passport.use(new LocalStrategy(
   function(username, password, done){
     var uname = username;
     var pwd = password;
-    var sql = 'SELECT * FROM users WHERE authId=?';
+    var sql = 'SELECT * FROM users WHERE authid=?';
     var msgNouser = '가입된 사용자가 아닙니다.';
     var msgNopass = '패스워드가 잘못되었습니다.';
 
     pool.getConnection(function(error, conn) {
         if (error) { throw error; }
 
-        conn.query(sql, ['local'+uname], function(err, results){
+        conn.query(sql, ['local:'+uname], function(err, results){
           if (err) { throw err; }
           if(err){
             console.log(msgNouser);
@@ -124,11 +124,9 @@ passport.use(new LocalStrategy(
             return hasher({password:pwd, salt:user.salt}, function(err, pass, salt, hash){
               if(hash === user.password){
                 console.log('use LocalStrategy', user);
-                conn.release();
                 return done(null, user);
               } else {
                 console.log(msgNopass);
-                conn.release();
                 return done(null, false, { code: 9012, message: '패스워드가 잘못되었습니다.' });
               }
             });
@@ -178,33 +176,44 @@ app.post('/auth/register', function(req, res){
       nickname:req.body.nickname
     };
     var sql = 'INSERT INTO users SET ?';
-    conn.query(sql, user, function(err, results){
-      if (err) { throw err; }
-      if(err){
-        console.log(err.errno);
-        if(err.errno === 1582 || err.errno === 1062){
-            var resData = {
-              code: '9001',
-              message: '사용중인 ID입니다'
-            };
-            return res.json(resData);
-        } else {
-            res.status(500);
-        }
 
-      } else {
-        req.login(user, function(err){
-          req.session.save(function(){
-            var resData = {
-              code: '1000',
-              message: '가입되었습니다',
-              authid: user.authid,
-              nickname: user.nickname
-            };
-            return res.json(resData);
-          });
+    pool.getConnection(function(error, conn) {
+        if (error) { throw error; }
+
+        conn.query(sql, user, function(err, results){
+          if (err) { throw err; }
+          if(err){
+            console.log(err.errno);
+            if(err.errno === 1582 || err.errno === 1062){
+                var resData = {
+                  code: '9001',
+                  message: '사용중인 ID입니다'
+                };
+                conn.release();
+                return res.json(resData);
+            } else {
+                conn.release();
+                res.status(500);
+            }
+
+          } else {
+            req.login(user, function(err){
+              if (err) { throw err; }
+
+              req.session.save(function(){
+                var resData = {
+                  code: '1000',
+                  message: '가입되었습니다',
+                  authid: user.authid,
+                  nickname: user.nickname
+                };
+                conn.release();
+                return res.json(resData);
+              });
+            });
+          }
         });
-      }
+
     });
 
   });
@@ -226,6 +235,7 @@ app.get('/orders/:authid',
         if (err) { throw err; }
         if(err){
           console.log(err.errno);
+          conn.release();
         } else {
           var resData = {
             code: '1000',
@@ -261,17 +271,24 @@ app.post(
     sendyn: req.body.sendyn
   }
   var sql = 'INSERT INTO orders SET ?';
-  conn.query(sql, order, function(err, results){
-    if (err) { throw err; }
-    if(err){
-      console.log(err.errno);
-    } else {
-      var resData = {
-        code: '1000',
-        message: '주문이 등록되었습니다'
-      };
-      return res.json(resData);
-    }
+  pool.getConnection(function(error, conn) {
+      if (error) { throw error; }
+
+      conn.query(sql, order, function(err, results){
+        if (err) { throw err; }
+        if(err){
+          console.log(err.errno);
+          conn.release();
+        } else {
+          var resData = {
+            code: '1000',
+            message: '주문이 등록되었습니다'
+          };
+          conn.release();
+          return res.json(resData);
+        }
+      });
+
   });
 });
 
@@ -281,31 +298,28 @@ app.delete('/orders/:authid/:oid',
   console.log(req.body);
 
   //주문일시, 이름, 연락처, 주소, 상품, 금액, 택배비, 기타
-  // var order = {
-  //   sellerId: req.params.authid,
-  //   orderdate: req.body.orderDate,
-  //   ordername: req.body.orderName,
-  //   orderphone: req.body.orderPhone,
-  //   recpaddress: req.body.recpAddress,
-  //   products: req.body.products,
-  //   orderamount: req.body.orderAmount,
-  //   deliverycharge: req.body.deliveryCharge,
-  //   ordermemo: req.body.orderMemo,
-  //   paymentyn: req.body.paymentyn,
-  //   sendyn: req.body.sendyn
-  // }
-  var sql = 'DELETE FROM orders WHERE ordernum=' + req.params.oid;
-  conn.query(sql, req.body, function(err, results){
-    if (err) { throw err; }
-    if(err){
-      console.log(err.errno);
-    } else {
-      var resData = {
-        code: '1000',
-        message: '주문이 삭제되었습니다'
-      };
-      return res.json(resData);
-    }
+  var order = {
+    sellerid: req.params.authid,
+    ordernum: req.params.oid
+  }
+  var sql = 'DELETE FROM orders WHERE ?';
+  pool.getConnection(function(error, conn) {
+      if (error) { throw error; }
+
+      conn.query(sql, order, function(err, results){
+        if (err) { throw err; }
+        if(err){
+          console.log(err.errno);
+          conn.release();
+        } else {
+          var resData = {
+            code: '1000',
+            message: '주문이 삭제되었습니다'
+          };
+          conn.release();
+          return res.json(resData);
+        }
+      });
   });
 });
 
@@ -329,17 +343,24 @@ app.put('/orders/:authid/:oid',
     sendyn: req.body.sendyn
   }
   var sql = 'UPDATE orders SET ? WHERE ordernum=' + req.params.oid;
-  conn.query(sql, req.body, function(err, results){
-    if (err) { throw err; }
-    if(err){
-      console.log(err.errno);
-    } else {
-      var resData = {
-        code: '1000',
-        message: '주문이 수정되었습니다'
-      };
-      return res.json(resData);
-    }
+  pool.getConnection(function(error, conn) {
+      if (error) { throw error; }
+
+      conn.query(sql, order, function(err, results){
+        if (err) { throw err; }
+        if(err){
+          console.log(err.errno);
+          conn.release();
+        } else {
+          var resData = {
+            code: '1000',
+            message: '주문이 수정되었습니다'
+          };
+          conn.release();
+          return res.json(resData);
+        }
+      });
+
   });
 });
 
