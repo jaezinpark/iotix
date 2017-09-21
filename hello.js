@@ -10,18 +10,29 @@ var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
 var hasher = bkfd2Password();
 var mysql      = require('mysql');
+/*
 var conn = mysql.createConnection({
   host     : 'us-cdbr-iron-east-05.cleardb.net',
   user     : 'b2212031659833',
   password : 'aeb44d8b',
   database : 'heroku_c7374f367bb0cba'
 });
+*/
+var pool = mysql.createPool({
+  connectionLimit: 10,
+  host     : 'us-cdbr-iron-east-05.cleardb.net',
+  user     : 'b2212031659833',
+  password : 'aeb44d8b',
+  database : 'heroku_c7374f367bb0cba'
+});
+/*
 conn.connect(function(err){
   console.log(err);
 });
 conn.on('error', function (err){
   console.log('conn.on: ' + err.code);
-})
+});
+*/
 var app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -69,14 +80,20 @@ passport.serializeUser(function(user, done) {
 passport.deserializeUser(function(id, done) {
   console.log('deserializeUser', id);
   var sql = 'SELECT * FROM users WHERE authId=?';
-  conn.query(sql, [id], function(err, results){
-    if (err) { throw err; }
-    if(err){
-      console.log(err);
-      done('There is no user.');
-    } else {
-      done(null, results[0]);
-    }
+  pool.getConnection(function(error, conn) {
+      if (error) { throw error; }
+
+      conn.query(sql, [id], function(err, results){
+        if (err) { throw err; }
+        if(err){
+          console.log(err);
+          done('There is no user.');
+        } else {
+          done(null, results[0]);
+        }
+        conn.release();
+      });
+
   });
 });
 passport.use(new LocalStrategy(
@@ -86,28 +103,38 @@ passport.use(new LocalStrategy(
     var sql = 'SELECT * FROM users WHERE authId=?';
     var msgNouser = '가입된 사용자가 아닙니다.';
     var msgNopass = '패스워드가 잘못되었습니다.';
-    conn.query(sql, ['local'+uname], function(err, results){
-      if (err) { throw err; }
-      if(err){
-        console.log(msgNouser);
-        return done(null, false, { code: 9011, message: '가입된 사용자가 아닙니다.' });
-      }
-      if(results.length === 0){
-        console.log(msgNouser);
-        return done(null, false, { code: 9011, message: '가입된 사용자가 아닙니다.' });
-      } else {
-        var user = results[0];
-        return hasher({password:pwd, salt:user.salt}, function(err, pass, salt, hash){
-          if(hash === user.password){
-            console.log('use LocalStrategy', user);
-            return done(null, user);
+
+    pool.getConnection(function(error, conn) {
+        if (error) { throw error; }
+
+        conn.query(sql, ['local'+uname], function(err, results){
+          if (err) { throw err; }
+          if(err){
+            console.log(msgNouser);
+            conn.release();
+            return done(null, false, { code: 9011, message: '가입된 사용자가 아닙니다.' });
+          }
+          if(results.length === 0){
+            console.log(msgNouser);
+            conn.release();
+            return done(null, false, { code: 9011, message: '가입된 사용자가 아닙니다.' });
           } else {
-            console.log(msgNopass);
-            return done(null, false, { code: 9012, message: '패스워드가 잘못되었습니다.' });
+            var user = results[0];
+            conn.release();
+            return hasher({password:pwd, salt:user.salt}, function(err, pass, salt, hash){
+              if(hash === user.password){
+                console.log('use LocalStrategy', user);
+                conn.release();
+                return done(null, user);
+              } else {
+                console.log(msgNopass);
+                conn.release();
+                return done(null, false, { code: 9012, message: '패스워드가 잘못되었습니다.' });
+              }
+            });
           }
         });
-      }
-    });
+    }
   }
 ));
 
@@ -189,18 +216,25 @@ app.get('/orders/:authid',
   console.log(req.params.authid);
 
   var sql = 'SELECT * FROM orders WHERE sellerid=' + req.params.authid + ' ORDER BY orderdate DESC ';
-  conn.query(sql, order, function(err, results){
-    if (err) { throw err; }
-    if(err){
-      console.log(err.errno);
-    } else {
-      var resData = {
-        code: '1000',
-        message: results
-      };
-      console.log(results)
-      return res.json(resData);
-    }
+
+  pool.getConnection(function(error, conn) {
+      if (error) { throw error; }
+
+      conn.query(sql, order, function(err, results){
+        if (err) { throw err; }
+        if(err){
+          console.log(err.errno);
+        } else {
+          var resData = {
+            code: '1000',
+            message: results
+          };
+          console.log(results);
+          conn.release();
+          return res.json(resData);
+        }
+      });
+
   });
 });
 
