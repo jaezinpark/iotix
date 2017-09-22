@@ -295,18 +295,13 @@ app.post(
 // 5.주문삭제   : DELETE /orders/:authid/:oid
 app.delete('/orders/:authid/:oid',
   function(req, res){
-  console.log(req.body);
+  console.log(req.params.oid);
 
-  //주문일시, 이름, 연락처, 주소, 상품, 금액, 택배비, 기타
-  var order = {
-    sellerid: req.params.authid,
-    ordernum: req.params.oid
-  }
-  var sql = 'DELETE FROM orders WHERE ?';
+  var sql = 'DELETE FROM orders WHERE ordernum=' + req.params.oid;
   pool.getConnection(function(error, conn) {
       if (error) { throw error; }
 
-      conn.query(sql, order, function(err, results){
+      conn.query(sql, function(err, results){
         if (err) { throw err; }
         if(err){
           console.log(err.errno);
